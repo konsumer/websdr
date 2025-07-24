@@ -5,59 +5,87 @@ const workletCode = `
 class WasmRadioProcessor extends AudioWorkletProcessor {
   constructor(options) {
     super()
-    this.rawDataBuffer = []
+    this.wasmReady = false
+    this.audioBuffer = null
+    this.bufferPosition = 0
+    
     this.port.onmessage = async (event) => {
       if (event.data.type === 'radioData') {
-        const newData = new Uint8Array(event.data.buffer)
-        this.rawDataBuffer = Array.from(newData)
-        // console.log(this.rawDataBuffer)
+        // For now, just ignore radio data while testing sine wave
       }
     }
-    WebAssembly.instantiate(wasmBytes, {}).then(({ instance }) => {
+    
+    this.initWasm()
+  }
+
+  async initWasm() {
+    try {
+      const { instance } = await WebAssembly.instantiate(wasmBytes, {})
       this.wasm = instance.exports
+      
       if (this.wasm._initialize) {
         this.wasm._initialize()
       }
       if (this.wasm._start) {
         this.wasm._start()
       }
-      this.inputBufferPtr = this.wasm.get_input_pointer()
-      this.inputSize = this.wasm.get_input_size()
+      
       this.outputBufferPtr = this.wasm.get_output_pointer()
       this.outputSize = this.wasm.get_output_size()
       this.expectedSamples = Math.floor(this.outputSize / 4)
-    })
+      
+      this.wasmReady = true
+      console.log('WASM radio processor ready', {
+        outputSize: this.outputSize,
+        expectedSamples: this.expectedSamples
+      })
+    } catch (error) {
+      console.error('Failed to initialize WASM:', error)
+    }
   }
 
   process(inputs, outputs, parameters) {
-    if (!this.wasm) {
-      console.log('no wasm')
-      return true
-    }
     const output = outputs[0]
     const outputChannel = output[0]
-    if (this.rawDataBuffer.length >= this.inputSize) {
-      const inputData = this.rawDataBuffer.splice(0, this.inputSize)
-      const mem = new Uint8Array(this.wasm.memory.buffer)
-      mem.set(inputData, this.inputBufferPtr)
-      this.wasm.process_samples()
-      const audioData = new Float32Array(this.wasm.memory.buffer, this.outputBufferPtr, this.expectedSamples)
-      const samplesNeeded = outputChannel.length
-      const samplesAvailable = Math.min(samplesNeeded, audioData.length)
-      for (let i = 0; i < samplesAvailable; i++) {
-        outputChannel[i] = audioData[i]
-      }
-      for (let i = samplesAvailable; i < samplesNeeded; i++) {
-        outputChannel[i] = 0
-      }
+    const samplesNeeded = outputChannel.length
+    
+    if (!this.wasmReady) {
+      outputChannel.fill(0)
+      return true
     }
+
+    // Generate new audio data only when buffer is empty or insufficient
+    if (!this.audioBuffer || this.bufferPosition + samplesNeeded > this.audioBuffer.length) {
+      this.wasm.process_samples(sampleRate, radioSampleRate)
+      
+      // Get fresh audio data
+      const wasmAudio = new Float32Array(
+        this.wasm.memory.buffer, 
+        this.outputBufferPtr, 
+        this.expectedSamples
+      )
+      
+      // Copy to our buffer to avoid WASM memory issues
+      this.audioBuffer = new Float32Array(wasmAudio.length)
+      this.audioBuffer.set(wasmAudio)
+      this.bufferPosition = 0
+    }
+    
+    // Copy the exact amount needed from our buffer
+    for (let i = 0; i < samplesNeeded; i++) {
+      outputChannel[i] = this.audioBuffer[this.bufferPosition + i]
+    }
+    
+    // Advance buffer position
+    this.bufferPosition += samplesNeeded
+    
     return true
   }
 }
 `
 
-export default async function wasmWorklet(audioContext, name, bytes) {
-  const code = `const wasmBytes = new Uint8Array([${new Uint8Array(bytes).join(',')}])\n` + workletCode + `\nregisterProcessor('${name}', WasmRadioProcessor)`
+export default async function wasmWorklet(audioContext, name, wasmBytes, radioSampleRate = 2_000_000) {
+  const code = `const wasmBytes = new Uint8Array([${new Uint8Array(wasmBytes).join(',')}])\nconst radioSampleRate=${radioSampleRate}\n` + workletCode + `\nregisterProcessor('${name}', WasmRadioProcessor)`
   const url = URL.createObjectURL(new Blob([code], { type: 'text/javascript' }))
   await audioContext.audioWorklet.addModule(url)
   URL.revokeObjectURL(url)

@@ -1,46 +1,17 @@
-// simple FM demodulator for HackRF (WASM)
+// sine-wave tester
 // /opt/wasi-sdk/bin/clang -mexec-model=reactor -O3 docs/websdr/websdr_fm.c -o docs/websdr_fm.wasm
 
 #include <stdint.h>
-#include <stddef.h>
 #include <math.h>
-#include <string.h>
 
-typedef struct {
-    float I, Q;
-} complex_t;
+#define SINE_FREQUENCY 440.0f       // 440Hz sine wave
+static uint32_t phase_accumulator = 0;
 
-typedef struct {
-    float last_I, last_Q;
-    float filter_state;
-    int decimation_counter;
-} fm_processor_t;
-
+// these are the fixed-length buffers used to pass data in/out of wasm
 #define INPUT_LENGTH 262144
-#define OUTPUT_LEGNTH 8192
-
-#define PRE_DECIMATION 10 // 20MHz -> 2MHz
-#define FINAL_DECIMATION 42 // 2MHz -> ~48kHz
-
-#define SAMPLE_RATE 2000000.0f
-#define CUTOFF_FREQ  15000.0f
-const float ALPHA = (1.0f / SAMPLE_RATE) / ((1.0f / (2.0f * M_PI * CUTOFF_FREQ)) + (1.0f / SAMPLE_RATE));
-
+#define OUTPUT_LENGTH 8192
 static int8_t input_bytes[INPUT_LENGTH];
-static float output_audio[OUTPUT_LEGNTH];
-static fm_processor_t processor = {0};
-
-static inline float low_pass_filter(float input, float* state, float alpha) {
-    *state = *state + alpha * (input - *state);
-    return *state;
-}
-
-static inline float fm_demodulate(float curr_I, float curr_Q, float prev_I, float prev_Q) {
-    // Complex multiplication for phase difference
-    float real = curr_I * prev_I + curr_Q * prev_Q;
-    float imag = curr_Q * prev_I - curr_I * prev_Q;
-    return atan2f(imag, real);
-}
+static float output_audio[OUTPUT_LENGTH];
 
 __attribute__((export_name("get_output_pointer")))
 float* get_output_pointer() {
@@ -54,7 +25,7 @@ int8_t* get_input_pointer() {
 
 __attribute__((export_name("get_output_size")))
 uint32_t get_output_size() {
-    return OUTPUT_LEGNTH * sizeof(float);
+    return OUTPUT_LENGTH * sizeof(float);
 }
 
 __attribute__((export_name("get_input_size")))
@@ -63,31 +34,14 @@ uint32_t get_input_size() {
 }
 
 __attribute__((export_name("process_samples")))
-int process_samples() {
-    size_t output_count = 0;
-
-    // Process I/Q pairs with pre-decimation
-    for (size_t i = 0; i < INPUT_LENGTH - 1 && output_count < OUTPUT_LEGNTH; i += PRE_DECIMATION * 2) {
-        // Convert int8 to normalized float
-        float curr_I = (float)input_bytes[i] / 128.0f;
-        float curr_Q = (float)input_bytes[i + 1] / 128.0f;
-        
-        // FM demodulation
-        float audio_sample = fm_demodulate(curr_I, curr_Q, processor.last_I, processor.last_Q);
-        
-        // Update state
-        processor.last_I = curr_I;
-        processor.last_Q = curr_Q;
-        
-        // Low-pass filter
-        audio_sample = low_pass_filter(audio_sample * 0.3f, &processor.filter_state, ALPHA);
-        
-        // Final decimation
-        if (++processor.decimation_counter >= FINAL_DECIMATION) {
-            processor.decimation_counter = 0;
-            output_audio[output_count++] = audio_sample;
-        }
+void process_samples(float audioSamplerate, float radioSamplerate) {
+    // Generate sine wave - ignore input for now
+    const float two_pi = 2.0f * M_PI;
+    const float phase_increment = (SINE_FREQUENCY * two_pi) / audioSamplerate;
+    for (int i = 0; i < OUTPUT_LENGTH; i++) {
+        float phase = (float)phase_accumulator * phase_increment;
+        output_audio[i] = 0.3f * sinf(phase);  // 0.3 amplitude to avoid clipping
+        phase_accumulator++;
     }
-    
-    return output_count;
 }
+

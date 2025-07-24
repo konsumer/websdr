@@ -123,7 +123,7 @@ export class HackRF extends Radio {
     await this.setAmpEnable(false)
     await this.setLNAGain(16)
     await this.setVGAGain(16)
-    await this.setSampleRate(20_000_000)
+    await this.setSampleRate(2_000_000)
   }
 
   // RF Amplifier Control
