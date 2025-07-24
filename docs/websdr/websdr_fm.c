@@ -1,17 +1,20 @@
-// sine-wave tester
+// FM demodulator
+// this still needs work, but you can kinda make out FM audio...
 // /opt/wasi-sdk/bin/clang -mexec-model=reactor -O3 docs/websdr/websdr_fm.c -o docs/websdr_fm.wasm
 
 #include <stdint.h>
-#include <math.h>
 
-#define SINE_FREQUENCY 440.0f       // 440Hz sine wave
-static uint32_t phase_accumulator = 0;
+#define INPUT_LENGTH 262144 * 4
+#define OUTPUT_LENGTH 8192 * 4
 
-// these are the fixed-length buffers used to pass data in/out of wasm
-#define INPUT_LENGTH 262144
-#define OUTPUT_LENGTH 8192
 static int8_t input_bytes[INPUT_LENGTH];
 static float output_audio[OUTPUT_LENGTH];
+
+// Optimized FM demod state
+static float prev_i = 0.0f;
+static float prev_q = 0.0f;
+static float dc_filter = 0.0f;
+static float audio_filter = 0.0f;
 
 __attribute__((export_name("get_output_pointer")))
 float* get_output_pointer() {
@@ -35,13 +38,50 @@ uint32_t get_input_size() {
 
 __attribute__((export_name("process_samples")))
 void process_samples(float audioSamplerate, float radioSamplerate) {
-    // Generate sine wave - ignore input for now
-    const float two_pi = 2.0f * M_PI;
-    const float phase_increment = (SINE_FREQUENCY * two_pi) / audioSamplerate;
-    for (int i = 0; i < OUTPUT_LENGTH; i++) {
-        float phase = (float)phase_accumulator * phase_increment;
-        output_audio[i] = 0.3f * sinf(phase);  // 0.3 amplitude to avoid clipping
-        phase_accumulator++;
+    int decimation = (int)(radioSamplerate / audioSamplerate);
+    int iq_pairs = INPUT_LENGTH / 2;
+    int audio_idx = 0;
+    
+    for (int i = 0; i < iq_pairs && audio_idx < OUTPUT_LENGTH; i += decimation) {
+        // Convert to float with better scaling
+        float I = (float)input_bytes[i * 2] / 128.0f;
+        float Q = (float)input_bytes[i * 2 + 1] / 128.0f;
+        
+        // FM demodulation
+        float demod = 0.0f;
+        if (i > 0) {
+            float cross = I * prev_q - Q * prev_i;
+            float mag_sq = I*I + Q*Q + prev_i*prev_i + prev_q*prev_q; // Include previous magnitude
+            if (mag_sq > 1e-6f) {
+                demod = cross / (mag_sq * 0.5f); // Normalize by average magnitude
+            }
+        }
+        
+        prev_i = I;
+        prev_q = Q;
+        
+        // Better DC blocking - higher cutoff frequency
+        dc_filter = dc_filter * 0.99f + demod * 0.01f;
+        float dc_removed = demod - dc_filter;
+        
+        // Audio low-pass filtering to reduce static
+        audio_filter = audio_filter * 0.8f + dc_removed * 0.2f;
+        
+        // Better gain scaling
+        float audio = audio_filter * 1.0f;
+        
+        // Soft limiting
+        if (audio > 0.95f) audio = 0.95f;
+        if (audio < -0.95f) audio = -0.95f;
+        
+        output_audio[audio_idx] = audio;
+        audio_idx++;
+    }
+    
+    // Fill remaining
+    while (audio_idx < OUTPUT_LENGTH) {
+        output_audio[audio_idx] = 0.0f;
+        audio_idx++;
     }
 }
 
