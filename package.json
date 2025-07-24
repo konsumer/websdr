@@ -1,0 +1,9 @@
+{
+  "name": "websdr",
+  "version": "0.0.0",
+  "type": "module",
+  "main": "docs/websdr/websdr.js",
+  "scripts": {
+    "start": "npx -y live-server docs"
+  }
+}
