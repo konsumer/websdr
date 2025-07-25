@@ -7,5 +7,6 @@ I got some ideas from these:
 - [hackrf-sweep](https://github.com/cho45/hackrf-sweep-webusb/blob/master/hackrf.js)
 - [official SDK](https://github.com/greatscottgadgets/hackrf/blob/master/host/libhackrf/src/hackrf.h)
 - [blog post about using hackrf on web](https://charliegerard.dev/blog/replay-attacks-javascript-hackrf/)
+- [DSP lib](https://github.com/AlexandreRouma/dsp) - it's C++, but I might be able to use it (or port it to C99) for a kind of stdlib for radio (and also null-units)
 
- At some point I will add some wasm-based units for DSP-processing, and setup a native/web host for the whole thing, so you can write processors in any language, and create a network in host (native or web.) I would like to eventually have something similar to gnuradio, but no re-compile, and you can make your processing-blocks in any language.
+At some point I will add some wasm-based units for DSP-processing, and setup a native/web host for the whole thing, so you can write processors in any language, and create a network in host (native or web.) I would like to eventually have something similar to gnuradio, but no re-compile, and you can make your processing-blocks in any language.
