@@ -25,6 +25,29 @@ export class RadioFM extends HTMLElement {
         await this.radio.setFreq(this.freq * 1_000_000)
       }
 
+      btnConnect.remove()
+
+      const freqHolder = document.createElement('div')
+      freqHolder.style = 'display: flex; gap: 5px; align-items: center;'
+      this.shadow.appendChild(freqHolder)
+
+      const freqSlider = document.createElement('input')
+      freqSlider.type = 'range'
+      freqSlider.min = '88'
+      freqSlider.max = '108'
+      freqSlider.step = '0.1'
+      freqSlider.value = this.freq
+      freqHolder.appendChild(freqSlider)
+
+      const freqVal = document.createElement('div')
+      freqVal.innerHTML = this.freq
+      freqHolder.appendChild(freqVal)
+
+      freqSlider.addEventListener('input', () => {
+        freqVal.innerHTML = freqSlider.value
+        this.attributes.freq.value = freqSlider.value
+      })
+
       const audioContext = new (window.AudioContext || window.webkitAudioContext)()
       if (audioContext.state === 'suspended') {
         await audioContext.resume()
@@ -48,7 +71,6 @@ export class RadioFM extends HTMLElement {
     if (name === 'freq' && this.radio) {
       this.freq = Number(newValue || '0')
       await this.radio.setFreq(this.freq * 1_000_000)
-      console.log('freq set', this.freq)
     }
   }
 }
