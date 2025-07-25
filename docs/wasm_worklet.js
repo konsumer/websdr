@@ -73,7 +73,7 @@ class WasmRadioProcessor extends AudioWorkletProcessor {
       mem.set(newData, this.inputBufferPtr)
       
       // Run FM demodulation
-      this.wasm.process_samples(48000.0, 2000000.0)
+      this.wasm.process_samples(sampleRate, radioSampleRate)
       
       // Get processed audio
       const wasmAudio = new Float32Array(
