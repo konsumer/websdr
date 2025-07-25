@@ -50,11 +50,6 @@ class WasmRadioProcessor extends AudioWorkletProcessor {
       this.expectedSamples = Math.floor(this.outputSize / 4)
       
       this.wasmReady = true
-      console.log('WASM radio processor ready', {
-        inputSize: this.inputSize,
-        outputSize: this.outputSize,
-        expectedSamples: this.expectedSamples
-      })
     } catch (error) {
       console.error('Failed to initialize WASM:', error)
     }
