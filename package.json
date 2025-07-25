@@ -4,6 +4,8 @@
   "type": "module",
   "main": "docs/websdr/websdr.js",
   "scripts": {
-    "start": "npx -y live-server docs"
+    "start": "npx -y live-server docs",
+    "build:fm": "/opt/wasi-sdk/bin/clang -mexec-model=reactor -O3 docs/websdr/websdr_fm.c -o docs/websdr_fm.wasm",
+    "build:sine": "/opt/wasi-sdk/bin/clang -mexec-model=reactor -O3 docs/websdr/websdr_sine.c -o docs/websdr_sine.wasm"
   }
 }

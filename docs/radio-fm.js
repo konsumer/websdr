@@ -35,16 +35,16 @@ export class RadioFM extends HTMLElement {
       freqSlider.type = 'range'
       freqSlider.min = '88'
       freqSlider.max = '108'
-      freqSlider.step = '0.1'
+      freqSlider.step = '0.01'
       freqSlider.value = this.freq
       freqHolder.appendChild(freqSlider)
 
       const freqVal = document.createElement('div')
-      freqVal.innerHTML = this.freq
+      freqVal.innerHTML = parseFloat(freqSlider.value).toFixed(2)
       freqHolder.appendChild(freqVal)
 
       freqSlider.addEventListener('input', () => {
-        freqVal.innerHTML = freqSlider.value
+        freqVal.innerHTML = parseFloat(freqSlider.value).toFixed(2)
         this.attributes.freq.value = freqSlider.value
       })
 
