@@ -185,7 +185,7 @@ export default function Spectrogram({
     }
   }, [radio, fftSize, waterfallHeight, dynamicRange, referenceLevel, showCenterLine, centerLineColor, theme])
 
-  if (!radio) return <div>No radio connected</div>
+  if (!radio) return null
 
   return (
     <div style={{ position: 'relative' }}>
