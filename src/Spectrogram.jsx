@@ -29,7 +29,8 @@ export default function Spectrogram({
   referenceLevel = -10, // Changed from -20 to -10 for darker display
   showCenterLine = true,
   centerLineColor = 'rgba(0, 0, 0, 0.5)',
-  theme = 'viridis' // 'viridis', 'heat', 'heatDark', 'plasma', 'turbo'
+  theme = 'viridis', // 'viridis', 'heat', 'heatDark', 'plasma', 'turbo'
+  showInfo = false
 }) {
   const canvasRef = useRef()
   const { radio } = useRadio()
@@ -188,43 +189,24 @@ export default function Spectrogram({
   if (!radio) return null
 
   return (
-    <div style={{ position: 'relative' }}>
-      <canvas
-        ref={canvasRef}
-        style={{
-          width: '100%',
-          height: waterfallHeight,
-          background: '#000',
-          display: 'block',
-          imageRendering: 'pixelated'
-        }}
-      />
-      <div
-        style={{
-          position: 'absolute',
-          top: 10,
-          left: 10,
-          color: 'white',
-          background: 'rgba(0,0,0,0.7)',
-          padding: '10px',
-          borderRadius: 4,
-          fontSize: 11,
-          fontFamily: 'monospace'
-        }}
-      >
-        <div>Frame: {debugInfo.frameCount}</div>
-        <div>
-          I: avg={debugInfo.avgI} [{debugInfo.minI}, {debugInfo.maxI}]
+    <div className='relative'>
+      <canvas ref={canvasRef} className='bg-black w-full rendering-pixelated' />
+      {!!showInfo && (
+        <div className='absolute top-2 left-2 bg-black text-white text-xs p-2 opacity-50 '>
+          <div>Frame: {debugInfo.frameCount}</div>
+          <div>
+            I: avg={debugInfo.avgI} [{debugInfo.minI}, {debugInfo.maxI}]
+          </div>
+          <div>
+            Q: avg={debugInfo.avgQ} [{debugInfo.minQ}, {debugInfo.maxQ}]
+          </div>
+          <div>DC: {debugInfo.dcPower}</div>
+          <div>Power: {debugInfo.totalPower}</div>
+          <div>
+            FFT: {fftSize} | Range: {dynamicRange}dB
+          </div>
         </div>
-        <div>
-          Q: avg={debugInfo.avgQ} [{debugInfo.minQ}, {debugInfo.maxQ}]
-        </div>
-        <div>DC: {debugInfo.dcPower}</div>
-        <div>Power: {debugInfo.totalPower}</div>
-        <div>
-          FFT: {fftSize} | Range: {dynamicRange}dB
-        </div>
-      </div>
+      )}
     </div>
   )
 }

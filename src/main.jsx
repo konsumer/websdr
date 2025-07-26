@@ -26,7 +26,7 @@ createRoot(document.getElementById('root')).render(
   <RadioProvider>
     <div className='p-4 flex flex-col gap-2'>
       <ConnectorWidget />
-      <Spectrogram theme='plasma' />
+      <Spectrogram theme='plasma' showInfo />
       <SliderFreqFM defaultValue={90.7} />
     </div>
   </RadioProvider>

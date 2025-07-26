@@ -1,2 +1,12 @@
 @import 'tailwindcss';
 @plugin "daisyui";
+
+.rendering-auto {
+  image-rendering: auto;
+}
+.rendering-crisp-edges {
+  image-rendering: crisp-edges;
+}
+.rendering-pixelated {
+  image-rendering: pixelated;
+}
