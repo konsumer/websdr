@@ -25,7 +25,7 @@ export default function SliderFreqFM({ defaultValue }) {
 
   return (
     <div className='flex flex-row gap-2'>
-      <input className='grow' type='range' min='87.9' max='108' step='0.1' value={val} onChange={handleChange} />
+      <input className='grow' type='range' min={1} max={1000} step={0.1} value={val} onChange={handleChange} />
       <div>{Number(val).toFixed(1)}</div>
     </div>
   )
